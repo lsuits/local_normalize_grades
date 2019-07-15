@@ -31,7 +31,7 @@ class normalize {
      *
      * @return mixed $data
      */
-    public function get_moodle_grade_data() {
+    public static function get_grade_data() {
         global $DB;
 
         // SQL for course level grades for every student in the system.
@@ -80,7 +80,7 @@ class normalize {
     public function check_grade_new($limiter, $originalgrade) {
         global $DB;
         $calculated = get_calculated_grade_data($limiter);
-        if (isset($calculated) {
+        if (isset($calculated)) {
             // This is a sanity check to ensure we did not return an outdated or modified grade/item.
             if ($originalgrade != $calculated->originalgrade) {
                 // It looks like the record has been updated since the last time we checked, delete it.
@@ -89,8 +89,10 @@ class normalize {
             } else {
                // We found the record and nothing changed.
                return false;
+            }
         } else {
             return true;
+        }
     }
 
     /**
