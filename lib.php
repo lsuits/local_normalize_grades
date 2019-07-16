@@ -69,6 +69,20 @@ class normalize {
     }
 
     /**
+     * Returns all normalized grade records.
+     *
+     * @param string $limiter
+     * @return mixed $data (single record)
+     */
+    public static function get_all_calculated_grade_data() {
+        global $DB;
+
+    $data = new stdCLass;
+    $data = $DB->get_records('normalized_grades');
+    return $data;
+    }
+
+    /**
      * Checks to see if the original grade data matches the normalized original grade.
      * Deletes the normalized item if it exsits, but does not match.
      *
