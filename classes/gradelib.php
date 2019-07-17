@@ -107,61 +107,133 @@ class grade_report_normalize_grades extends grade_report {
 
 
 
-// Returns the formatted course total item value give a userid and a course id
-// If a course has no course grade item (no grades at all) the system returns '-'
-// If a user has no course grade, the system returns '-'
-// If a user has grades and the instructor allows those grades to be viewed, the system returns the final grade as stored in the database
-// If a user has grades and the instructor has hidden the course grade item, the system returns the string 'hidden'
-// If a user has grades and the instructor has hidden some of the users grades and those hidden items impact the course grade based on the instructor's settings, the system recalculates the course grade appropriately
+/*
+ * Returns the formatted course total item value give a userid and a course id.
+ * If a course has no course grade item (no grades at all) the system returns '-'.
+ * If a user has no course grade, the system returns '-'.
+ * If a user has grades and the instructor has hidden some of the users grades
+ * and those hidden items impact the course grade based on the instructor's settings,
+ * the system recalculates the course grade appropriately
+ *
+ * @var courseid
+ * @var userid
+ * @return array
+ */
 function ng_get_grade_for_course($courseid, $userid) {
+    // Get the course total item for the course in question.
     $coursetotalitem = grade_item::fetch_course_item($courseid);
+
+    // Set the course context.
     $coursecontext = context_course::instance($courseid);
+
+    // Check to see if the user in question can view hidden grades.
     $canviewhidden = has_capability('moodle/grade:viewhidden', $coursecontext, $userid);
+
+    // Instantiate the grade report.
     $report = new grade_report_normalize_grades($userid, $courseid, null, $coursecontext);
+
+    // If there are no grades, return -.
     if (!$coursetotalitem) {
         $totalgrade = '-';
     }
 
+    // Set up the grade parameters for future use.
     $gradegradeparams = array(
         'itemid' => $coursetotalitem->id,
         'userid' => $userid
     );
 
+    // Instantiate the user grade.
     $usergradegrade = new grade_grade($gradegradeparams);
     $usergradegrade->grade_item =& $coursetotalitem;
 
+    // Set the finalgrade value.
     $finalgrade = $usergradegrade->finalgrade;
+
+    // If the user cannot view hidden grades and there is a grade, do more stuff.
     if (!$canviewhidden and !is_null($finalgrade)) {
+        // Adjust the grade value based on hidden items and rules.
         $adjustedgrade = $report->get_blank_hidden_total_and_adjust_bounds($courseid,
                                                                            $coursetotalitem,
                                                                            $finalgrade);
-        // We temporarily adjust the view of this grade item - because the min and
-        // max are affected by the hidden values in the aggregation.
+        // Adjust this grade item - min and max are affected by the hidden values.
         $coursetotalitem->grademax = $adjustedgrade['grademax'];
         $coursetotalitem->grademin = $adjustedgrade['grademin'];
+
     } else if (!is_null($finalgrade)) {
-        // Because the purpose of this block is to show MY grades as calculated for output
-        // we make sure we adhere to how hiding grades impacts the total grade regardless
-        // of if the user can view or not view hidden grades.
-        // Example: User may be a site admin, faculty assistant, or some other
-        // priveleged person and taking courses.
-        // In any case, it's best to calculate grades how the instructor specifies.
+        // Even if the user can view hidden grades, calculate them based on course rules.
         $adjustedgrade = $report->get_blank_hidden_total_and_adjust_bounds($courseid,
                                                                            $coursetotalitem,
                                                                            $finalgrade);
-        // We must use the specific max/min because it can be different for
-        // each grade_grade when items are excluded from sum of grades.
+        // Adjust this grade item - min and max are affected by the hidden values.
         $coursetotalitem->grademin = $usergradegrade->get_grade_min();
         $coursetotalitem->grademax = $usergradegrade->get_grade_max();
     }
+
+    // Sanity check. If we have an adjusted grade, do more stuff.
     if (isset($adjustedgrade)) {
-        $totalgrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true);
+        $coursegrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true);
+        $numericgrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true, GRADE_DISPLAY_TYPE_REAL, $coursetotalitem->decimals);
+        $percentgrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true, GRADE_DISPLAY_TYPE_PERCENTAGE, $coursetotalitem->decimals);
+        $lettergrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true, GRADE_DISPLAY_TYPE_LETTER, $coursetotalitem->decimals);
+
+        // If there is no grade, set the value to -.
     } else {
-        $totalgrade = '-';
+        $coursegrade = '-';
+        $numericgrade = '-';
+        $percentgrade = '-';
+        $lettergrade = '-';
     }
-    if ($coursetotalitem->hidden) {
-        $totalgrade = get_string('hidden', 'local_normalize_grades');
-    }
+
+    // Set up the total grade object.
+    $totalgrade = new \stdClass();
+
+    // Set the values appropriately so we can store them and not calculate them again.
+    $totalgrade->coursegrade = $coursegrade;
+    $totalgrade->numericgrade = $numericgrade;
+    $totalgrade->percentgrade = $percentgrade;
+    $totalgrade->lettergrade = $lettergrade;
+
+    // Return the course total grade object with formatted values for the user.
     return $totalgrade;
 }
 
+function ng_grade_formats($course, $user) {
+    global $CFG;
+    // Get the roles that are graded.
+    $gradebookroles = explode(',', $CFG->gradebookroles);
+
+    // Set up the course context.
+    $coursecontext = context_course::instance($course->id);
+
+    // Get the roles in the course.
+    $rolesincourse = get_user_roles($coursecontext, $user->id, false);
+
+    // Set up the course name for future use.
+    $coursename = $course->shortname;
+    // Ensure we get all graded roles.
+
+    if (count($rolesincourse) > 1) {
+        foreach ($rolesincourse as $roleincourse) {
+            // We only care about the system defined roles that are graded.
+            if (in_array($roleincourse->roleid, $gradebookroles)) {
+                 $content = "Course: " . $coursename . " - Student: " . $user->firstname . " " . $user->lastname . " - Grade: ";
+
+                // Here is where we actually get the grade.
+                $grade = ng_get_grade_for_course($course->id, $user->id);
+                $content = $content . $grade->coursegrade . " - Numeric: " . $grade->numericgrade . " - Percentage: " . $grade->percentgrade . " - Letter: " . $grade->lettergrade;
+                return $content;
+            }
+        }
+    } else {
+        $roleincourse = $rolesincourse ? array_pop($rolesincourse) : "GOATUser:" . $user->id . " - Course: " . $course->id;
+        if (in_array($roleincourse->roleid, $gradebookroles)) {
+             $content = "Course: " . $coursename . " - Student: " . $user->firstname . " " . $user->lastname . " - Grade: ";
+
+            // Here is where we actually get the grade.
+            $grade = ng_get_grade_for_course($course->id, $user->id) ? ng_get_grade_for_course($course->id, $user->id) : '0';
+            $content = $content . $grade->coursegrade . " - Numeric: " . $grade->numericgrade . " - Percentage: " . $grade->percentgrade . " - Letter: " . $grade->lettergrade;
+            return $content;
+        }
+    }
+}

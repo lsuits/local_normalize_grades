@@ -32,8 +32,9 @@ class normalize {
      * @return mixed $data
      */
     public static function get_grade_data() {
-        global $DB;
+        global $CFG, $DB;
 
+        $gradebookroles = $CFG->gradebookroles;
         // SQL for course level grades for every student in the system.
         $sql = "SELECT
                     CONCAT(gi.courseid, ' ', gg.userid, ' ', gi.id) AS limiter,
@@ -44,7 +45,34 @@ class normalize {
                     gg.timemodified
                 FROM {grade_items} gi
                     INNER JOIN {grade_grades} gg ON gg.itemid = gi.id
-                WHERE gi.itemtype = 'course'";
+                    INNER JOIN {context} cx ON gi.courseid = cx.instanceid
+                        AND cx.contextlevel = '50'
+                    INNER JOIN {role_assignments} ra ON cx.id = ra.contextid AND gg.userid = ra.userid
+                    INNER JOIN {role} r ON ra.roleid = r.id
+                WHERE gi.itemtype = 'course' AND gg.userid > 1 AND r.id IN ($gradebookroles) AND gg.finalgrade IS NOT NULL
+                GROUP BY limiter";
+
+        $lsusql = "SELECT
+                    CONCAT(gi.courseid, ' ', gg.userid, ' ', gi.id) AS limiter,
+                    gi.courseid AS courseid,
+                    gg.userid AS userid,
+                    gi.id AS itemid,
+                    gg.finalgrade AS originalgrade,
+                    gg.timemodified
+                FROM {grade_items} gi
+                    INNER JOIN {grade_grades} gg ON gg.itemid = gi.id
+                    INNER JOIN {enrol_ues_students} stu ON gg.userid = stu.userid
+                    INNER JOIN {course} c ON gi.courseid = c.id
+                    INNER JOIN {enrol_ues_sections} sec ON sec.idnumber = c.idnumber
+                    INNER JOIN {enrol_ues_semesters} sem ON sem.id = sec.semesterid
+                WHERE gi.itemtype = 'course'
+                    AND gg.userid > 1
+                    AND gg.finalgrade IS NOT NULL
+                    AND c.idnumber IS NOT NULL
+                    AND c.idnumber <> ''
+                    AND sem.classes_start <= UNIX_TIMESTAMP()
+                    AND sem.grades_due >= UNIX_TIMESTAMP()
+                GROUP BY limiter";
 
     $data = new stdCLass;
     // Get the data as defined in the SQL.

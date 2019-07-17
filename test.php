@@ -51,50 +51,27 @@ if(is_siteadmin($USER)){
     echo html_writer::table($calculatedtable);
 
     $generatedData = normalize::get_grade_data();
+
+/*
     $generatedtable = new html_table();
     $generatedtable->head = array('Limiter','Course ID', 'User ID' , 'Grade Item ID', 'Original Grade', 'Time Modified');
     $generatedtable->data = $generatedData;
     echo html_writer::table($generatedtable);
+*/
 
-$courseid = new stdClass;
+    $n=0;
 
-foreach ($generatedData as $datum) {
-    $courseids[] = $datum->courseid;
-    $userids[] = $datum->userid;
-}
+    foreach ($generatedData as $datum) {
+        $n++;
+        // Set up the user object for future use.
+        $user = $DB->get_record('user', array('id' => $datum->userid));
 
-    $gradebookroles = explode(',', $CFG->gradebookroles);
-$n=0;
-    foreach ($userids as $userid) {
-$n++;
-        $user = $DB->get_record('user', array('id' => $userid));
-        foreach ($courseids as $courseid) {
-            $course = get_course($courseid);
-            $coursecontext = context_course::instance($course->id);
-            $rolesincourse = get_user_roles($coursecontext);
-            $id = $course->id;
-            $coursename = $course->shortname;
-            foreach ($rolesincourse as $roleincourse) {
-                if (in_array($roleincourse->roleid, $gradebookroles)) {
-                    $content = $coursename . "User: " . $user->firstname . " " . $user->lastname . ": ";
-                    $params = array('class' => 'course');
-                    $leftpart = html_writer::tag('span', $content, $params);
-                    
-                    $content = ng_get_grade_for_course($id, $userid);
-                    $params = array('class' => 'gaag_grade');
-                    $rightpart = html_writer::tag('span', $content, $params);
-                    $rightpart = $course->showgrades == 1 ? html_writer::tag('span', $content, $params) : html_writer::tag('span', '-', $params);
-                    $content = $leftpart . $rightpart;
-                    echo html_writer::tag('p', $content);
-                    break;
-                }
-            }
-        }
-if ($n > 10) {
-break;
-}
+        // Set up the course object for future use.
+        $course = get_course($datum->courseid);
+
+        $grades = ng_grade_formats($course, $user);
+        echo html_writer::tag('p', $n . ": " . $grades);
     }
-
 
 /*
     $table2 = new table_sql('uniqueid');
@@ -120,8 +97,7 @@ break;
 
     echo $output->footer();
 
-}else{
-echo'nope';
+} else {
+    echo'nope';
 }
-
 ?>
