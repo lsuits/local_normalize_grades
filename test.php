@@ -19,15 +19,15 @@
  *
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
 require_once('../../config.php');
-require_once 'lib.php';
-
-defined('MOODLE_INTERNAL') || die();
-
+require_once($CFG->dirroot . '/local/normalize_grades/classes/normalize.php');
 require_once($CFG->dirroot . '/local/normalize_grades/classes/gradelib.php');
 
 global $SITE,$PAGE, $USER;
+
 require_login();
+
 $context = context_system::instance();
 $PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/local/normalize_grades/test.php'));
@@ -36,32 +36,32 @@ $PAGE->set_course($SITE);
 $PAGE->set_title(get_string('pluginname', 'local_normalize_grades'));
 $PAGE->set_heading('Normalize Grades Test');
 
-$lngName = get_string('pluginname', 'local_normalize_grades');
-$PAGE->navbar->add($lngName);
+$lngname = get_string('pluginname', 'local_normalize_grades');
+$PAGE->navbar->add($lngname);
 
 if(is_siteadmin($USER)){
     $output = $PAGE->get_renderer('local_normalize_grades');
     echo $output->header();
 
 
-    $calculatedData = normalize::get_all_calculated_grade_data();
+    $calculateddata = normalize::get_all_precalculated_grade_data();
     $calculatedtable = new html_table();
     $calculatedtable->head = array('ID', 'Limiter','Course ID', 'User ID' , 'Grade Item ID', 'Grade Grade ID', 'Original Grade', 'Calculated Grade', 'Time Modified');
-    $calculatedtable->data = $calculatedData;
+    $calculatedtable->data = $calculateddata;
     echo html_writer::table($calculatedtable);
 
-    $generatedData = normalize::get_grade_data();
+    $generateddata = normalize::get_stored_grade_data();
 
-/*
+
     $generatedtable = new html_table();
     $generatedtable->head = array('Limiter','Course ID', 'User ID' , 'Grade Item ID', 'Original Grade', 'Time Modified');
-    $generatedtable->data = $generatedData;
+    $generatedtable->data = $generateddata;
     echo html_writer::table($generatedtable);
-*/
+
 
     $n=0;
 
-    foreach ($generatedData as $datum) {
+    foreach ($generateddata as $datum) {
         $n++;
         // Set up the user object for future use.
         $user = $DB->get_record('user', array('id' => $datum->userid));

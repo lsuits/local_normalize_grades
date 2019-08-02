@@ -11,7 +11,7 @@ M.local_normalize_grades.testreport = {
         scrollable: 'y',
         height:     '600px'
     });
-    
+
     table.render('#report');
   }
 };

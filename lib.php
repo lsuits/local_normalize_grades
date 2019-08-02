@@ -23,128 +23,99 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-// Building the class for the task to be run during scheduled tasks
-class normalize {
+/**
+ * Creates an error banner on any page where hidden grade calculation settings differ among reports.
+ *
+ * @return Standard moodle notification.
+ */
+function local_normalize_grades_reportmismatch() {
+    global $CFG, $USER, $PAGE;
+var_dump($PAGE->activityrecord);
+    // Get the courseid for the course.
+    $courseid = $PAGE->course->id;
 
-    /**
-     * Returns the appropriate data for use in checking and creating normalized grades.
-     *
-     * @return mixed $data
-     */
-    public static function get_grade_data() {
-        global $CFG, $DB;
+    // Get the context for this course.
+    $coursecontext = $PAGE->context;
 
-        $gradebookroles = $CFG->gradebookroles;
-        // SQL for course level grades for every student in the system.
-        $sql = "SELECT
-                    CONCAT(gi.courseid, ' ', gg.userid, ' ', gi.id) AS limiter,
-                    gi.courseid AS courseid,
-                    gg.userid AS userid,
-                    gi.id AS itemid,
-                    gg.finalgrade AS originalgrade,
-                    gg.timemodified
-                FROM {grade_items} gi
-                    INNER JOIN {grade_grades} gg ON gg.itemid = gi.id
-                    INNER JOIN {context} cx ON gi.courseid = cx.instanceid
-                        AND cx.contextlevel = '50'
-                    INNER JOIN {role_assignments} ra ON cx.id = ra.contextid AND gg.userid = ra.userid
-                    INNER JOIN {role} r ON ra.roleid = r.id
-                WHERE gi.itemtype = 'course' AND gg.userid > 1 AND r.id IN ($gradebookroles) AND gg.finalgrade IS NOT NULL
-                GROUP BY limiter";
+    // Check to see if the user is a teacher or not.
+    $isteacher = (has_capability('moodle/grade:edit', $coursecontext));
 
-        $lsusql = "SELECT
-                    CONCAT(gi.courseid, ' ', gg.userid, ' ', gi.id) AS limiter,
-                    gi.courseid AS courseid,
-                    gg.userid AS userid,
-                    gi.id AS itemid,
-                    gg.finalgrade AS originalgrade,
-                    gg.timemodified
-                FROM {grade_items} gi
-                    INNER JOIN {grade_grades} gg ON gg.itemid = gi.id
-                    INNER JOIN {enrol_ues_students} stu ON gg.userid = stu.userid
-                    INNER JOIN {course} c ON gi.courseid = c.id
-                    INNER JOIN {enrol_ues_sections} sec ON sec.idnumber = c.idnumber
-                    INNER JOIN {enrol_ues_semesters} sem ON sem.id = sec.semesterid
-                WHERE gi.itemtype = 'course'
-                    AND gg.userid > 1
-                    AND gg.finalgrade IS NOT NULL
-                    AND c.idnumber IS NOT NULL
-                    AND c.idnumber <> ''
-                    AND sem.classes_start <= UNIX_TIMESTAMP()
-                    AND sem.grades_due >= UNIX_TIMESTAMP()
-                GROUP BY limiter";
+    // If this is a teaching course and the user is able to modify grades, do stuff.
+    if ($courseid <> SITEID && $isteacher) {
 
-    $data = new stdCLass;
-    // Get the data as defined in the SQL.
-    $data = $DB->get_records_sql($sql);
+        // Get the value for the Overview Report.
+        $overviewrpt = grade_get_setting($courseid, 'report_overview_showtotalsifcontainhidden', $CFG->grade_report_overview_showtotalsifcontainhidden);
 
-    // Return this ginourmous bit of data to loop through.
-    return $data;
-    }
+        // Get the value for the User Report.
+        $userrpt = grade_get_setting($courseid, 'report_user_showtotalsifcontainhidden', $CFG->grade_report_user_showtotalsifcontainhidden);
 
-    /**
-     * Returns the normalized grade record that matches the limiter.
-     *
-     * @param string $limiter
-     * @return mixed $data (single record)
-     */
-    public function get_calculated_grade_data($limiter) {
-        global $DB;
-
-    $data = new stdCLass;
-    $data = $DB->get_record('normalized_grades', array('limiter' => $limiter), $strictness=IGNORE_MISSING);
-    return $data;
-    }
-
-    /**
-     * Returns all normalized grade records.
-     *
-     * @param string $limiter
-     * @return mixed $data (single record)
-     */
-    public static function get_all_calculated_grade_data() {
-        global $DB;
-
-    $data = new stdCLass;
-    $data = $DB->get_records('normalized_grades');
-    return $data;
-    }
-
-    /**
-     * Checks to see if the original grade data matches the normalized original grade.
-     * Deletes the normalized item if it exsits, but does not match.
-     *
-     * @param string $limiter
-     * @param string $timemodified
-     * @param string $originalgrade
-     * @return bool
-     */
-    public function check_grade_new($limiter, $originalgrade) {
-        global $DB;
-        $calculated = get_calculated_grade_data($limiter);
-        if (isset($calculated)) {
-            // This is a sanity check to ensure we did not return an outdated or modified grade/item.
-            if ($originalgrade != $calculated->originalgrade) {
-                // It looks like the record has been updated since the last time we checked, delete it.
-                $DB->delete_records('normalized_grades', array('limiter' => $limiter));
-                return true;
-            } else {
-               // We found the record and nothing changed.
-               return false;
-            }
+        // Get the value for the Forecast Report, if it exists.
+        if ($CFG->grade_report_forecast_showtotalsifcontainhidden) {
+            $forecastrpt = grade_get_setting($courseid, 'report_forecast_showtotalsifcontainhidden', $CFG->grade_report_forecast_showtotalsifcontainhidden);
         } else {
-            return true;
+
+            // Otherwise, use the value of the User report.
+            $forecastrpt = $userrpt;
+        }
+
+        // Create the link to the settings page so the user can fix the problem.
+        $coursesettingslink = $CFG->wwwroot . '/grade/edit/settings/index.php?id=' . $courseid;
+
+        // If anything is wrong, figure out what is wrong.
+        if ($overviewrpt <> $userrpt || $userrpt <> $forecastrpt) {
+
+            // If the overview report and user report do not match.
+            if ($overviewrpt <> $userrpt) {
+
+                // Set the error string appropriately.
+                $errorreport = get_string('orur_reportmismatch', 'local_normalize_grades');
+
+            // If the forecast report and user report do not match.
+            } else {
+
+                // Set the error string appropriately.
+                $errorreport = get_string('ur-fcr_reportmismatch', 'local_normalize_grades');
+            }
+
+            // Build the link and fetch the built string.
+            $errorlink = get_string('link', 'local_normalize_grades', $coursesettingslink);
+
+            // Fetch the consistency string.
+            $errorconsistency = get_string('consistent', 'local_normalize_grades');
+
+            // Build the errors.
+            $errors = $errorreport . '<br>' . $errorlink . '<br>' . $errorconsistency;
+
+            // Return the Moodle notification as an error.
+            return \core\notification::error($errors);
         }
     }
-
-    /**
-     * Adds the new grade item based on the data provided.
-     *
-     * @param string $data
-     * @return int (normalized_grades.id)
-     */
-    public function add_grade_new($data) {
-        // Add the grade item to the normalized_grades table and return the id for use.
-        return $DB->insert_record('normalized_grades', $data, $returnid=true, $bulk=false);
-    }
 }
+
+/**
+ * Adds links to the given navigation node if caps are met.
+ *
+ * @param navigation_node $navigationnode The navigation node to add the question branch to
+ * @param object $context
+ * @return navigation_node Returns the question branch that was added
+ */
+function local_normalize_grades_extend_navigation(global_navigation $navigationnode) {
+    global $USER, $PAGE;
+
+    // Only build the navigation out for site administrators.
+    if (!is_siteadmin($USER)) {
+        return;
+    }
+
+    // Set up the navigation node.
+    $normalizenode = $navigationnode->add('Normalize', null, navigation_node::TYPE_CONTAINER, null);
+
+    // Add the node.
+    $normalizenode->add('test page', new moodle_url('/local/normalize_grades/test.php'), navigation_node::TYPE_SETTING, null);
+
+    // Return the node.
+    return $normalizenode;
+}
+
+// Run the mismatch checker and build the error if needed.
+local_normalize_grades_reportmismatch();

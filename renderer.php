@@ -22,8 +22,8 @@
  */
 
 defined('MOODLE_INTERNAL') || die;
-require_once $CFG->libdir.'/tablelib.php';
-require_once 'lib.php';
+require_once($CFG->libdir.'/tablelib.php');
+require_once($CFG->dirroot.'/local/normalize_grades/classes/normalize.php');
 
 /**
  * normalize_grades verification status local rendrer

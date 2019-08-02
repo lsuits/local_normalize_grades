@@ -73,6 +73,7 @@ class grade_report_normalize_grades extends grade_report {
      * Constructor. Sets local copies of user preferences and initialises grade_tree.
      * Run for each course the user is enrolled in.
      * @param int $userid
+     * @param int $courseid
      * @param string $context
      */
     public function __construct($userid, $courseid, $context) {
@@ -83,12 +84,25 @@ class grade_report_normalize_grades extends grade_report {
         $this->user = \core_user::get_user($userid);
 
         // Create an array (for later use in grade/report/lib.php).
-        $this->showtotalsifcontainhidden = array();
+        $this->showototalsifcontainhidden = array();
 
         // Sanity check.
         if ($courseid) {
-            // Populate this (for later use in grade/report/lib.php).
-            $this->showtotalsifcontainhidden[$courseid] = grade_get_setting($courseid, 'report_overview_showtotalsifcontainhidden', $CFG->grade_report_overview_showtotalsifcontainhidden);
+            /**
+             * This is problematic as the instructor can set these to be different.
+             * Differing settings will result in different grades.
+             * The admin is required to choose a report to key off.
+             * If no report is chosen, default to the user report.
+             */
+            $key = $CFG->normalize_grades_reportkey ? $CFG->normalize_grades_reportkey : 'user';
+            if ($key == 'overview') {
+                // Grabs the course specific overview report setting if exists, if not, grabs the system setting.
+                $report = grade_get_setting($courseid, 'report_overview_showtotalsifcontainhidden', $CFG->grade_report_overview_showtotalsifcontainhidden);
+            } else {
+                // Grabs the course specific user report setting if exists, if not, grabs the system setting.
+                $report = grade_get_setting($courseid, 'report_user_showtotalsifcontainhidden', $CFG->grade_report_user_showtotalsifcontainhidden);
+            }
+            $this->showtotalsifcontainhidden[$courseid] = $report;
         }
     }
 
@@ -100,7 +114,6 @@ class grade_report_normalize_grades extends grade_report {
     }
 
     function get_blank_hidden_total_and_adjust_bounds($courseid, $coursetotalitem, $finalgrade){
-
         return($this->blank_hidden_total_and_adjust_bounds($courseid, $coursetotalitem, $finalgrade));
     }
 }
@@ -130,7 +143,7 @@ function ng_get_grade_for_course($courseid, $userid) {
     $canviewhidden = has_capability('moodle/grade:viewhidden', $coursecontext, $userid);
 
     // Instantiate the grade report.
-    $report = new grade_report_normalize_grades($userid, $courseid, null, $coursecontext);
+    $report = new grade_report_normalize_grades($userid, $courseid, $coursecontext);
 
     // If there are no grades, return -.
     if (!$coursetotalitem) {
@@ -152,6 +165,7 @@ function ng_get_grade_for_course($courseid, $userid) {
 
     // If the user cannot view hidden grades and there is a grade, do more stuff.
     if (!$canviewhidden and !is_null($finalgrade)) {
+
         // Adjust the grade value based on hidden items and rules.
         $adjustedgrade = $report->get_blank_hidden_total_and_adjust_bounds($courseid,
                                                                            $coursetotalitem,
@@ -162,24 +176,23 @@ function ng_get_grade_for_course($courseid, $userid) {
 
     } else if (!is_null($finalgrade)) {
         // Even if the user can view hidden grades, calculate them based on course rules.
-        $adjustedgrade = $report->get_blank_hidden_total_and_adjust_bounds($courseid,
-                                                                           $coursetotalitem,
-                                                                           $finalgrade);
+        $adjustedgrade['grade'] = $finalgrade;
+
         // Adjust this grade item - min and max are affected by the hidden values.
         $coursetotalitem->grademin = $usergradegrade->get_grade_min();
         $coursetotalitem->grademax = $usergradegrade->get_grade_max();
     }
 
     // Sanity check. If we have an adjusted grade, do more stuff.
-    if (isset($adjustedgrade)) {
-        $coursegrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true);
+    if (isset($adjustedgrade['grade'])) {
+        $calculatedgrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true);
         $numericgrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true, GRADE_DISPLAY_TYPE_REAL, $coursetotalitem->decimals);
         $percentgrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true, GRADE_DISPLAY_TYPE_PERCENTAGE, $coursetotalitem->decimals);
         $lettergrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true, GRADE_DISPLAY_TYPE_LETTER, $coursetotalitem->decimals);
 
         // If there is no grade, set the value to -.
     } else {
-        $coursegrade = '-';
+        $calculatedgrade = '-';
         $numericgrade = '-';
         $percentgrade = '-';
         $lettergrade = '-';
@@ -189,7 +202,9 @@ function ng_get_grade_for_course($courseid, $userid) {
     $totalgrade = new \stdClass();
 
     // Set the values appropriately so we can store them and not calculate them again.
-    $totalgrade->coursegrade = $coursegrade;
+    $totalgrade->limiter = $courseid . " " . $userid . " " . $coursetotalitem->id;
+    $totalgrade->originalgrade = $finalgrade;
+    $totalgrade->calculatedgrade = $calculatedgrade;
     $totalgrade->numericgrade = $numericgrade;
     $totalgrade->percentgrade = $percentgrade;
     $totalgrade->lettergrade = $lettergrade;
@@ -221,7 +236,7 @@ function ng_grade_formats($course, $user) {
 
                 // Here is where we actually get the grade.
                 $grade = ng_get_grade_for_course($course->id, $user->id);
-                $content = $content . $grade->coursegrade . " - Numeric: " . $grade->numericgrade . " - Percentage: " . $grade->percentgrade . " - Letter: " . $grade->lettergrade;
+                $content = $content . $grade->calculatedgrade . " - Limiter: " . $grade->limiter . " - Numeric: " . $grade->numericgrade . " - Percentage: " . $grade->percentgrade . " - Letter: " . $grade->lettergrade . " - Original Grade: " . $grade->originalgrade;
                 return $content;
             }
         }
@@ -230,9 +245,10 @@ function ng_grade_formats($course, $user) {
         if (in_array($roleincourse->roleid, $gradebookroles)) {
              $content = "Course: " . $coursename . " - Student: " . $user->firstname . " " . $user->lastname . " - Grade: ";
 
-            // Here is where we actually get the grade.
+            // Here is where we actually get the grade. If there is no grade, return 0..
             $grade = ng_get_grade_for_course($course->id, $user->id) ? ng_get_grade_for_course($course->id, $user->id) : '0';
-            $content = $content . $grade->coursegrade . " - Numeric: " . $grade->numericgrade . " - Percentage: " . $grade->percentgrade . " - Letter: " . $grade->lettergrade;
+            $content = $content . $grade->calculatedgrade . " - Limiter: " . $grade->limiter . " - Numeric: " . $grade->numericgrade . " - Percentage: " . $grade->percentgrade . " - Letter: " . $grade->lettergrade . " - Original Grade: " . $grade->originalgrade;
+
             return $content;
         }
     }

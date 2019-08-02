@@ -23,6 +23,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = "Normalize Grades";
+$string['pluginname'] = 'Normalize Grades';
+$string['ngc'] = 'Normalized Grade Configuration';
+$string['reportkey'] = 'Choose the report you want to key off of for normalization of grades.';
+$string['reportkeyhelp'] = '<ul><li>The instructor can choose different settings for including/excluding hidden grades for each of these reports.</li><li>Please choose one to be consistent.</strong></li><li>It\'s also best to instruct your faculty to be consistent on how hidden grades impact a student.</li></ul>';
+$string['orur_reportmismatch'] = '<p><strong>Overview Report\'s</strong> &ldquo;Hide totals if they contain hidden items&rdquo; setting <strong>does not match</strong> the setting value for this course\'s <strong>User Report.</strong></p>';
+$string['ur-fcr_reportmismatch'] = '<p><strong>Projected Final Grade Report\'s</strong> &ldquo;Hide totals if they contain hidden items&rdquo; setting <strong>does not match</strong> the setting value for this course\'s <strong>User Report.</strong></p>';
+$string['link'] = 'Please go to <a href = {$a}> to your course grade settings page</a> to fix it.';
+$string['consistent'] = 'Please ensure a consistent setting across your reports, otherwise students may be presented with different grades depending on the report they view.';
+$string['help'] = 'For more information, please go here.';
 $string['task_name'] = 'Normalize Grades';
 $string['task_name_help'] = 'Calculates and stores grades in the DB for easy retreival.';
