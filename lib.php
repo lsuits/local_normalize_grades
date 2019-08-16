@@ -30,7 +30,6 @@ defined('MOODLE_INTERNAL') || die();
  */
 function local_normalize_grades_reportmismatch() {
     global $CFG, $USER, $PAGE;
-var_dump($PAGE->activityrecord);
     // Get the courseid for the course.
     $courseid = $PAGE->course->id;
 
