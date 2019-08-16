@@ -48,6 +48,7 @@ if(is_siteadmin($USER)){
     $calculatedtable = new html_table();
     $calculatedtable->head = array('ID', 'Limiter','Course ID', 'User ID' , 'Grade Item ID', 'Grade Grade ID', 'Original Grade', 'Calculated Grade', 'Time Modified');
     $calculatedtable->data = $calculateddata;
+echo'<br /><br /><br /><br />PRE-CALCULATED<br />';
     echo html_writer::table($calculatedtable);
 
     $generateddata = normalize::get_stored_grade_data();
@@ -56,11 +57,12 @@ if(is_siteadmin($USER)){
     $generatedtable = new html_table();
     $generatedtable->head = array('Limiter','Course ID', 'User ID' , 'Grade Item ID', 'Original Grade', 'Time Modified');
     $generatedtable->data = $generateddata;
+echo'<br /><br /><br /><br />GENERATED<br />';
     echo html_writer::table($generatedtable);
 
 
     $n=0;
-
+echo'<br /><br /><br /><br />GRADES<br />';
     foreach ($generateddata as $datum) {
         $n++;
         // Set up the user object for future use.
@@ -72,28 +74,6 @@ if(is_siteadmin($USER)){
         $grades = ng_grade_formats($course, $user);
         echo html_writer::tag('p', $n . ": " . $grades);
     }
-
-/*
-    $table2 = new table_sql('uniqueid');
-    $headers = array('Limiter','Course ID', 'User ID' , 'Grade Item ID', 'Original Grade', 'Time Modified');
-    $table2->define_headers($headers);
-    $columns = array('limiter','courseid', 'userid' , 'itemid', 'originalgrade', 'timemodified');
-    $table2->define_columns($columns);
-    $table2->define_baseurl("$CFG->wwwroot/local/normalize_grades/test.php");
-    $table2->set_sql('CONCAT(gi.courseid, " ", gg.userid, " ", gi.id) AS limiter,
-                    gi.courseid AS courseid,
-                    gg.userid AS userid,
-                    gi.id AS itemid,
-                    gg.finalgrade AS originalgrade,
-                    gg.timemodified',
-                    "{grade_items} gi
-                    INNER JOIN {grade_grades} gg ON gg.itemid = gi.id",
-                'gi.itemtype = \'course\'');
-    $table2->out(10000, false);
-
-    $reportData = new test_report();
-    echo $output->render($reportData);
-*/
 
     echo $output->footer();
 

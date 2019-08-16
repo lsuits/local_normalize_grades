@@ -133,6 +133,7 @@ class grade_report_normalize_grades extends grade_report {
  * @return array
  */
 function ng_get_grade_for_course($courseid, $userid) {
+    global $DB;
     // Get the course total item for the course in question.
     $coursetotalitem = grade_item::fetch_course_item($courseid);
 
@@ -192,23 +193,54 @@ function ng_get_grade_for_course($courseid, $userid) {
 
         // If there is no grade, set the value to -.
     } else {
-        $calculatedgrade = '-';
-        $numericgrade = '-';
-        $percentgrade = '-';
-        $lettergrade = '-';
+        $calculatedgrade = null;
+        $numericgrade = null;
+        $percentgrade = null;
+        $lettergrade = null;
     }
 
     // Set up the total grade object.
     $totalgrade = new \stdClass();
+    // Set the name of the table.
+    $dbtable = 'normalize_grades';
+
+    // Get the grade_grade item so we can use its ID and timemodified data.
+    $gg = $DB->get_record('grade_grades', array('itemid'=>$coursetotalitem->id, 'userid'=>$userid), '*', IGNORE_MISSING);
 
     // Set the values appropriately so we can store them and not calculate them again.
     $totalgrade->limiter = $courseid . " " . $userid . " " . $coursetotalitem->id;
+    $totalgrade->courseid = $courseid;
+    $totalgrade->userid = $userid;
+    $totalgrade->itemid = $coursetotalitem->id;
+    $totalgrade->gradeid = $gg->id;
     $totalgrade->originalgrade = $finalgrade;
     $totalgrade->calculatedgrade = $calculatedgrade;
     $totalgrade->numericgrade = $numericgrade;
     $totalgrade->percentgrade = $percentgrade;
     $totalgrade->lettergrade = $lettergrade;
+    $totalgrade->timemodified = $gg->timemodified;
 
+    // Check to make sure we do not have an entry matching the course/user/itemid with a matching grade.
+    if ($DB->record_exists($dbtable, array('limiter'=>$totalgrade->limiter))) {
+        if (!$DB->record_exists($dbtable, array(
+                                            'limiter'=>$totalgrade->limiter,
+                                            'originalgrade'=>$totalgrade->originalgrade,
+                                            'calculatedgrade'=>$totalgrade->calculatedgrade,
+                                            'numericgrade'=>$totalgrade->numericgrade,
+                                            'percentgrade'=>$totalgrade->percentgrade,
+                                            'lettergrade'=>$totalgrade->lettergrade))) {
+            // A mismatched record exists for this course/user/itemid, update it.
+            // Grab the record in question so we can grab its ID for updating.
+            $dataid = $DB->get_record($dbtable, array('limiter'=>$totalgrade->limiter), '*', IGNORE_MISSING);
+            // Set the ID as part of the totalgrade object.
+            $totalgrade->id = $dataid->id;
+            // Update the record.
+            $DB->update_record($dbtable, $totalgrade);
+        }
+    } else {
+        // No record exists for this course/user/itemid, create it.
+        $DB->insert_record($dbtable, $totalgrade, $returnid=true, $bulk=false);
+    }
     // Return the course total grade object with formatted values for the user.
     return $totalgrade;
 }

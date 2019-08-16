@@ -49,7 +49,7 @@ class normalize {
                         AND cx.contextlevel = '50'
                     INNER JOIN {role_assignments} ra ON cx.id = ra.contextid AND gg.userid = ra.userid
                     INNER JOIN {role} r ON ra.roleid = r.id
-                WHERE gi.itemtype = 'course' AND gg.userid > 1 AND r.id IN ($gradebookroles) AND gg.finalgrade IS NOT NULL
+                WHERE gi.itemtype = 'course' AND gg.userid > 1 AND r.id IN ($gradebookroles)
                 GROUP BY limiter";
 
         $lsusql = "SELECT
@@ -67,7 +67,6 @@ class normalize {
                     INNER JOIN {enrol_ues_semesters} sem ON sem.id = sec.semesterid
                 WHERE gi.itemtype = 'course'
                     AND gg.userid > 1
-                    AND gg.finalgrade IS NOT NULL
                     AND c.idnumber IS NOT NULL
                     AND c.idnumber <> ''
                     AND sem.classes_start <= UNIX_TIMESTAMP()
