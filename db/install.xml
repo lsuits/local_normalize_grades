@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/normalized_grades/db" VERSION="20190710" COMMENT="XMLDB file for Moodle local/normalized_grades"
+<XMLDB PATH="local/normalize_grades/db" VERSION="20190710" COMMENT="XMLDB file for Moodle local/normalize_grades"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
-    <TABLE NAME="normalized_grades" COMMENT="This table stores normalized grades with respect to hidden rules / drop lowest / keep highest / natural grading.">
+    <TABLE NAME="normalize_grades" COMMENT="This table stores normalized grades with respect to hidden rules / drop lowest / keep highest / natural grading.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>

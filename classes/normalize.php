@@ -92,7 +92,7 @@ class normalize {
         global $DB;
 
     $data = new stdCLass;
-    $data = $DB->get_record('normalized_grades', array('limiter' => $limiter), $strictness=IGNORE_MISSING);
+    $data = $DB->get_record('normalize_grades', array('limiter' => $limiter), $strictness=IGNORE_MISSING);
     return $data;
     }
 
@@ -106,7 +106,7 @@ class normalize {
         global $DB;
 
     $data = new stdCLass;
-    $data = $DB->get_records('normalized_grades');
+    $data = $DB->get_records('normalize_grades');
     return $data;
     }
 
@@ -126,7 +126,7 @@ class normalize {
             // This is a sanity check to ensure we did not return an outdated or modified grade/item.
             if ($originalgrade != $calculated->originalgrade) {
                 // It looks like the record has been updated since the last time we checked, delete it.
-                $DB->delete_records('normalized_grades', array('limiter' => $limiter));
+                $DB->delete_records('normalize_grades', array('limiter' => $limiter));
                 return true;
             } else {
                // We found the record and nothing changed.
@@ -141,10 +141,10 @@ class normalize {
      * Adds the new grade item based on the data provided.
      *
      * @param string $data
-     * @return int (normalized_grades.id)
+     * @return int (normalize_grades.id)
      */
     public function add_grade_new($data) {
-        // Add the grade item to the normalized_grades table and return the id for use.
-        return $DB->insert_record('normalized_grades', $data, $returnid=true, $bulk=false);
+        // Add the grade item to the normalize_grades table and return the id for use.
+        return $DB->insert_record('normalize_grades', $data, $returnid=true, $bulk=false);
     }
 }
