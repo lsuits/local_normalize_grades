@@ -15,16 +15,22 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * @package    block_quickmail
- * @copyright  2019 onwards Louisiana State University, LSUOnline
- * @copyright  2019 onwards Robert Russo
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
+ * Setting up the scheduled task.
+ *
+ * @package    local_normalize_grades
+ * @copyright  2019 Robert Russo
+ * @copyright  2019 LSUOnline
+ */ 
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->version = 2019081901;
-$plugin->requires = 2016052300;
-$plugin->release = "v0.0.1";
-$plugin->maturity = MATURITY_STABLE;
-$plugin->component = 'local_normalize_grades';
+// Define the task defaults.
+$tasks = array(
+    array(
+        'classname' => 'local_normalize_grades\task\normalize_grades',
+        'blocking' => 0,
+        'minute' => '0',
+        'hour' => '*',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*'
+    ),
+);

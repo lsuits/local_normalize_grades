@@ -24,6 +24,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'Normalize Grades';
+$string['normalize_grades'] = 'Normalize Grades';
 $string['ngc'] = 'Normalized Grade Configuration';
 $string['reportkey'] = 'Choose the report you want to key off of for normalization of grades.';
 $string['reportkeyhelp'] = '<ul><li>The instructor can choose different settings for including/excluding hidden grades for each of these reports.</li><li>Please choose one to be consistent.</strong></li><li>It\'s also best to instruct your faculty to be consistent on how hidden grades impact a student.</li></ul>';

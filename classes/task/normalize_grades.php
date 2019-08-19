@@ -21,20 +21,24 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 namespace local_normalize_grades\task;
 
-class normalize_grades extends \core\task\scheduled_task
-{
-    public function normalize() {
-        return get_string('task_name', 'local_normalize_grades');
+defined('MOODLE_INTERNAL') || die();
+
+class normalize_grades extends \core\task\scheduled_task {
+
+    /**
+     * Get a descriptive name for this task (shown to admins).
+     *
+     * @return string
+     */
+    public function get_name() {
+        return get_string('normalize_grades', 'local_normalize_grades');
     }
 
     public function execute() {
         global $CFG;
-                require_once($CFG->dirroot.'/local/noramlize_grades/lib.php');
-
-                return handle_local_normalize_grades();
+        require_once($CFG->dirroot . '/local/normalize_grades/locallib.php');
+        \local_normalize::run_normalize_grades();
     }
 }

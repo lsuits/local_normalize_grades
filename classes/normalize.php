@@ -74,8 +74,13 @@ class normalize {
                 GROUP BY limiter";
 
     $data = new stdCLass;
+    $dbman = $DB->get_manager();
     // Get the data as defined in the SQL.
-    $data = $DB->get_records_sql($sql);
+    if (!$dbman->table_exists('enrol_ues_courses')) {
+        $data = $DB->get_records_sql($lsusql);
+    } else {
+        $data = $DB->get_records_sql($sql);
+    }
 
     // Return this ginourmous bit of data to loop through.
     return $data;
@@ -87,12 +92,12 @@ class normalize {
      * @param string $limiter
      * @return mixed $data (single record)
      */
-    public function get_calculated_grade_data($limiter) {
+    public static function get_calculated_grade_data($limiter) {
         global $DB;
 
-    $data = new stdCLass;
-    $data = $DB->get_record('normalize_grades', array('limiter' => $limiter), $strictness=IGNORE_MISSING);
-    return $data;
+        $data = new stdCLass;
+        $data = $DB->get_record('normalize_grades', array('limiter' => $limiter), '*', $strictness=IGNORE_MISSING);
+        return $data;
     }
 
     /**
@@ -118,14 +123,13 @@ class normalize {
      * @param string $originalgrade
      * @return bool
      */
-    public function check_grade_new($limiter, $originalgrade) {
+    public static function check_grade_new_updated($limiter, $originalgrade) {
         global $DB;
-        $calculated = get_calculated_grade_data($limiter);
-        if (isset($calculated)) {
+        $calculated = !empty($originalgrade) ? null : self::get_calculated_grade_data($limiter);
+        if (!empty($calculated)) {
             // This is a sanity check to ensure we did not return an outdated or modified grade/item.
             if ($originalgrade != $calculated->originalgrade) {
-                // It looks like the record has been updated since the last time we checked, delete it.
-                $DB->delete_records('normalize_grades', array('limiter' => $limiter));
+                // It looks like the record has been updated since the last time we checked.
                 return true;
             } else {
                // We found the record and nothing changed.

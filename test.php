@@ -39,21 +39,19 @@ $PAGE->set_heading('Normalize Grades Test');
 $lngname = get_string('pluginname', 'local_normalize_grades');
 $PAGE->navbar->add($lngname);
 
-if(is_siteadmin($USER)){
+if (is_siteadmin($USER)) {
     $output = $PAGE->get_renderer('local_normalize_grades');
     echo $output->header();
 
-
     $calculateddata = normalize::get_all_precalculated_grade_data();
     $calculatedtable = new html_table();
-    $calculatedtable->head = array('ID', 'Limiter','Course ID', 'User ID' , 'Grade Item ID', 'Grade Grade ID', 'Original Grade', 'Calculated Grade', 'Time Modified');
+    $calculatedtable->head = array('ID', 'Limiter','Course ID', 'User ID' , 'Grade Item ID', 'Grade Grade ID', 'Original Grade', 'Calculated Grade', 'Numeric Grade', 'Percentage Grade', 'Letter Grade', 'Time Modified');
     $calculatedtable->data = $calculateddata;
 echo'<br /><br /><br /><br />PRE-CALCULATED<br />';
     echo html_writer::table($calculatedtable);
 
+
     $generateddata = normalize::get_stored_grade_data();
-
-
     $generatedtable = new html_table();
     $generatedtable->head = array('Limiter','Course ID', 'User ID' , 'Grade Item ID', 'Original Grade', 'Time Modified');
     $generatedtable->data = $generateddata;
@@ -74,10 +72,8 @@ echo'<br /><br /><br /><br />GRADES<br />';
         $grades = ng_grade_formats($course, $user);
         echo html_writer::tag('p', $n . ": " . $grades);
     }
-
     echo $output->footer();
-
 } else {
-    echo'nope';
+    redirect($CFG->wwwroot);
 }
 ?>

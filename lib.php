@@ -31,8 +31,11 @@ defined('MOODLE_INTERNAL') || die();
 function local_normalize_grades_reportmismatch() {
     global $CFG, $USER, $PAGE;
     // Get the courseid for the course.
-    $courseid = $PAGE->course->id;
+    if($PAGE->course->id == SITEID || !isset($PAGE->course->id)) {
+        return;
+    }
 
+    $courseid = $PAGE->course->id;
     // Get the context for this course.
     $coursecontext = $PAGE->context;
 
