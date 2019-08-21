@@ -12,6 +12,7 @@ If you wish for grades to be stored as faculty see them, let me know and I'll ad
 This system adheres to the "Hide totals if they contain hidden items" report value of the specified report.
 Example: "Show totals including hidden items" will give a total matching what the instructor sees as hidden items are calculated the same for both teacher and student.
 Whereas "Show totals excluding hidden items" will give one total for students (with hidden items excluded) and one total for teachers (because they can view hidden items).
+Of course, if your student role is set to view hidden items, this plugin will always store the grades the same way as it checks each user for their ability to view hidden items when calculating their course total grade.
 
 # Wait? Moodle does this?
 Yes. Yes it does and has been a problem for anyone who modifies the "Hide totals if they contain hidden items" value to exclude or hide items.
