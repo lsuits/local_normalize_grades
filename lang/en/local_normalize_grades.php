@@ -35,3 +35,6 @@ $string['consistent'] = 'Please ensure a consistent setting across your reports,
 $string['help'] = 'For more information, please go here.';
 $string['task_name'] = 'Normalize Grades';
 $string['task_name_help'] = 'Calculates and stores grades in the DB for easy retreival.';
+$string['cu_verbose'] = 'Grades for {$a->fn} {$a->ln} in {$a->cfn} took {$a->td} seconds to complete.';
+$string['ng_average_logs'] = 'Normalize Grades took {$a->tt} seconds to process {$a->ct} final grades.';
+$string['ng_total_logs'] = 'Normalize Grades took {$a->av} seconds per user per course to complete.';

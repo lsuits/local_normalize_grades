@@ -37,5 +37,9 @@ if ($hassiteconfig) {
     $settings->add(new admin_setting_configselect('normalize_grades_reportkey', get_string('reportkey', 'local_normalize_grades'),
                        get_string('reportkeyhelp', 'local_normalize_grades'), 'user', $options));
 
+    $settings->add(new admin_setting_configtext('normalize_grades_prefix', 'Course Prefix to limit by', 'Enter a course prefix here', ''));
+
+    $settings->add(new admin_setting_configcheckbox('normalize_grades_verbose', 'Verbose output logging?', 'Enable verbose output logging.', '0'));
+
     $ADMIN->add('localplugins', $settings);
 }

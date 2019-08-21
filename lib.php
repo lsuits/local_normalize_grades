@@ -23,6 +23,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once($CFG->dirroot . '/local//normalize_grades/classes/gradelib.php');
+
 /**
  * Creates an error banner on any page where hidden grade calculation settings differ among reports.
  *

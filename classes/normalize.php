@@ -15,9 +15,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * @package    block_quickmail
- * @copyright  2019 onwards Louisiana State University, LSUOnline
+ * @package    local_normalize_grades
  * @copyright  2019 onwards Robert Russo
+ * @copyright  2019 onwards Louisiana State University, LSUOnline
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -31,10 +31,25 @@ class normalize {
      *
      * @return mixed $data
      */
-    public static function get_stored_grade_data() {
+    public static function get_all_stored_grade_data() {
         global $CFG, $DB;
 
+        // Set the courselimit from the site config.
+        $courselimit = $CFG->normalize_grades_prefix;
+
+        // Set the additional where clause to be blank in case the course limiter is not sent.
+        $whereclause = '';
+
+        // Sanity check to see if the courselimiter is set.
+        if(!empty($courselimit)) {
+
+            // Set the additional where clause.
+            $whereclause = " AND c.shortname LIKE '" . $courselimit . "%'";
+        }
+
+        // Only get grades for graded roles.
         $gradebookroles = $CFG->gradebookroles;
+
         // SQL for course level grades for every student in the system.
         $sql = "SELECT
                     CONCAT(gi.courseid, ' ', gg.userid, ' ', gi.id) AS limiter,
@@ -48,10 +63,16 @@ class normalize {
                     INNER JOIN {context} cx ON gi.courseid = cx.instanceid
                         AND cx.contextlevel = '50'
                     INNER JOIN {role_assignments} ra ON cx.id = ra.contextid AND gg.userid = ra.userid
+                    INNER JOIN {course} c ON c.id = gi.courseid
                     INNER JOIN {role} r ON ra.roleid = r.id
-                WHERE gi.itemtype = 'course' AND gg.userid > 1 AND r.id IN ($gradebookroles)
-                GROUP BY limiter";
+                WHERE gi.itemtype = 'course'
+                    AND gg.userid > 1 AND r.id IN ($gradebookroles)"
+                    . $whereclause .
+                " GROUP BY limiter";
 
+        // LSU Specific SQL limits to current semester enrollments.
+        // LSU SQL does not need gradebook roles as the SIS only enrolls gradeable students.
+        // Course limiter is not used here.
         $lsusql = "SELECT
                     CONCAT(gi.courseid, ' ', gg.userid, ' ', gi.id) AS limiter,
                     gi.courseid AS courseid,
@@ -70,13 +91,15 @@ class normalize {
                     AND c.idnumber IS NOT NULL
                     AND c.idnumber <> ''
                     AND sem.classes_start <= UNIX_TIMESTAMP()
-                    AND sem.grades_due >= UNIX_TIMESTAMP()
-                GROUP BY limiter";
+                    AND sem.grades_due >= UNIX_TIMESTAMP()"
+                    . $whereclause .
+                " GROUP BY limiter";
 
     $data = new stdCLass;
+    // Set up the DB manager to check if the LSU tables exist.
     $dbman = $DB->get_manager();
     // Get the data as defined in the SQL.
-    if (!$dbman->table_exists('enrol_ues_courses')) {
+    if ($dbman->table_exists('enrol_ues_courses')) {
         $data = $DB->get_records_sql($lsusql);
     } else {
         $data = $DB->get_records_sql($sql);
@@ -109,6 +132,7 @@ class normalize {
     public static function get_all_precalculated_grade_data() {
         global $DB;
 
+    // Set up the data from the normalize grades table.
     $data = new stdCLass;
     $data = $DB->get_records('normalize_grades');
     return $data;
@@ -123,12 +147,15 @@ class normalize {
      * @param string $originalgrade
      * @return bool
      */
-    public static function check_grade_new_updated($limiter, $originalgrade) {
+    public static function check_grade_new_updated($limiter, $originalgrade, $coursegradesetting, $coursestoredsetting) {
         global $DB;
-        $calculated = !empty($originalgrade) ? null : self::get_calculated_grade_data($limiter);
+        // Get the stored calculated data for the given limiter if there is an originalgrade.
+        $calculated = self::get_calculated_grade_data($limiter);
+
+        // Upcoming sanity check.
         if (!empty($calculated)) {
             // This is a sanity check to ensure we did not return an outdated or modified grade/item.
-            if ($originalgrade != $calculated->originalgrade) {
+            if ($originalgrade != $calculated->originalgrade || $coursegradesetting <> $coursestoredsetting) {
                 // It looks like the record has been updated since the last time we checked.
                 return true;
             } else {

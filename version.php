@@ -23,8 +23,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2019081901;
+$plugin->version = 2019082100;
 $plugin->requires = 2016052300;
-$plugin->release = "v0.0.1";
+$plugin->release = "v1.0.0";
 $plugin->maturity = MATURITY_STABLE;
 $plugin->component = 'local_normalize_grades';

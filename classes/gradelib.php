@@ -106,6 +106,27 @@ class grade_report_normalize_grades extends grade_report {
         }
     }
 
+    public static function get_course_setting($courseid) {
+        global $CFG;
+        /**
+         * This is problematic as the instructor can set these to be different.
+         * Differing settings will result in different grades.
+         * The admin is required to choose a report to key off.
+         * If no report is chosen, default to the user report.
+         *
+         * Instructor will see a HUGE error in their course if there is no consistency in report settings.
+         */
+        $key = $CFG->normalize_grades_reportkey ? $CFG->normalize_grades_reportkey : 'user';
+        if ($key == 'overview') {
+            // Grabs the course specific overview report setting if exists, if not, grabs the system setting.
+            $report = grade_get_setting($courseid, 'report_overview_showtotalsifcontainhidden', $CFG->grade_report_overview_showtotalsifcontainhidden);
+        } else {
+            // Grabs the course specific user report setting if exists, if not, grabs the system setting.
+            $report = grade_get_setting($courseid, 'report_user_showtotalsifcontainhidden', $CFG->grade_report_user_showtotalsifcontainhidden);
+        }
+        return $report;
+    }
+
     function process_action($target, $action) {
     }
 
@@ -133,7 +154,7 @@ class grade_report_normalize_grades extends grade_report {
  * @return array
  */
 function ng_get_grade_for_course($courseid, $userid) {
-    global $DB;
+    global $CFG, $DB;
     // Get the course total item for the course in question.
     $coursetotalitem = grade_item::fetch_course_item($courseid);
 
@@ -191,7 +212,7 @@ function ng_get_grade_for_course($courseid, $userid) {
         $percentgrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true, GRADE_DISPLAY_TYPE_PERCENTAGE, $coursetotalitem->decimals);
         $lettergrade = grade_format_gradevalue($adjustedgrade['grade'], $coursetotalitem, true, GRADE_DISPLAY_TYPE_LETTER, $coursetotalitem->decimals);
 
-        // If there is no grade, set the value to -.
+        // If there is no grade, set the value to null.
     } else {
         $calculatedgrade = null;
         $numericgrade = null;
@@ -204,8 +225,13 @@ function ng_get_grade_for_course($courseid, $userid) {
     // Set the name of the table.
     $dbtable = 'normalize_grades';
 
+    // Get the value of the course setting and use it later.
+    $moodlecoursesetting = grade_report_normalize_grades::get_course_setting($courseid);
+    $limiter = $courseid . " " . $userid . " " . $coursetotalitem->id;
+    $storedsetting = $DB->get_record('normalize_grades', array('limiter' => $limiter), 'storedsetting');
+
     // Get the grade_grade item so we can use its ID and timemodified data.
-    $gg = $DB->get_record('grade_grades', array('itemid'=>$coursetotalitem->id, 'userid'=>$userid), '*', IGNORE_MISSING);
+    $gg = $DB->get_record('grade_grades', array('itemid' => $coursetotalitem->id, 'userid' => $userid), '*', IGNORE_MISSING);
 
     // Set the values appropriately so we can store them and not calculate them again.
     $totalgrade->limiter = $courseid . " " . $userid . " " . $coursetotalitem->id;
@@ -218,20 +244,24 @@ function ng_get_grade_for_course($courseid, $userid) {
     $totalgrade->numericgrade = $numericgrade;
     $totalgrade->percentgrade = $percentgrade;
     $totalgrade->lettergrade = $lettergrade;
+    $totalgrade->storedsetting = $moodlecoursesetting;
     $totalgrade->timemodified = $gg->timemodified;
 
     // Check to make sure we do not have an entry matching the course/user/itemid with a matching grade.
-    if ($DB->record_exists($dbtable, array('limiter'=>$totalgrade->limiter))) {
-        if (!$DB->record_exists($dbtable, array(
-                                            'limiter'=>$totalgrade->limiter,
-                                            'originalgrade'=>$totalgrade->originalgrade,
-                                            'calculatedgrade'=>$totalgrade->calculatedgrade,
-                                            'numericgrade'=>$totalgrade->numericgrade,
-                                            'percentgrade'=>$totalgrade->percentgrade,
-                                            'lettergrade'=>$totalgrade->lettergrade))) {
+    if ($DB->record_exists($dbtable, array('limiter' => $totalgrade->limiter))) {
+        if ($DB->record_exists($dbtable, array(
+                                            'limiter' => $totalgrade->limiter,
+                                            'originalgrade' => $totalgrade->originalgrade,
+                                            'calculatedgrade' => $totalgrade->calculatedgrade,
+                                            'numericgrade' => $totalgrade->numericgrade,
+                                            'percentgrade' => $totalgrade->percentgrade,
+                                            'lettergrade' => $totalgrade->lettergrade,
+                                            'storedsetting' => $moodlecoursesetting))) {
+       } else {
             // A mismatched record exists for this course/user/itemid, update it.
+            // The method of calculating student grades has, update it.
             // Grab the record in question so we can grab its ID for updating.
-            $dataid = $DB->get_record($dbtable, array('limiter'=>$totalgrade->limiter), '*', IGNORE_MISSING);
+            $dataid = $DB->get_record($dbtable, array('limiter' => $totalgrade->limiter), '*', IGNORE_MISSING);
             // Set the ID as part of the totalgrade object.
             $totalgrade->id = $dataid->id;
             // Update the record.
@@ -245,7 +275,7 @@ function ng_get_grade_for_course($courseid, $userid) {
     return $totalgrade;
 }
 
-function ng_grade_formats($course, $user) {
+function ng_grade_format_check($course, $user) {
     global $CFG;
     // Get the roles that are graded.
     $gradebookroles = explode(',', $CFG->gradebookroles);
@@ -282,6 +312,38 @@ function ng_grade_formats($course, $user) {
             $content = $content . $grade->calculatedgrade . " - Limiter: " . $grade->limiter . " - Numeric: " . $grade->numericgrade . " - Percentage: " . $grade->percentgrade . " - Letter: " . $grade->lettergrade . " - Original Grade: " . $grade->originalgrade;
 
             return $content;
+        }
+    }
+}
+
+function ng_grade_formats($course, $user) {
+    global $CFG;
+    // Get the roles that are graded.
+    $gradebookroles = explode(',', $CFG->gradebookroles);
+
+    // Set up the course context.
+    $coursecontext = context_course::instance($course->id);
+
+    // Get the roles in the course.
+    $rolesincourse = get_user_roles($coursecontext, $user->id, false);
+
+    // Set up the course name for future use.
+    $coursename = $course->shortname;
+    // Ensure we get all graded roles.
+
+    if (count($rolesincourse) > 1) {
+        foreach ($rolesincourse as $roleincourse) {
+            // We only care about the system defined roles that are graded.
+            if (in_array($roleincourse->roleid, $gradebookroles)) {
+                // Here is where we actually get the grade.
+                ng_get_grade_for_course($course->id, $user->id);
+            }
+        }
+    } else {
+        $roleincourse = $rolesincourse ? array_pop($rolesincourse) : "GOATUser:" . $user->id . " - Course: " . $course->id;
+        if (in_array($roleincourse->roleid, $gradebookroles)) {
+            // Here is where we actually get the grade. If there is no grade, return 0..
+            ng_get_grade_for_course($course->id, $user->id);
         }
     }
 }
