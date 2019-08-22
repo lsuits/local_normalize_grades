@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * @package    block_quickmail
+ * @package    local_normalize_grades
  * @copyright  2019 onwards Louisiana State University, LSUOnline
  * @copyright  2019 onwards Robert Russo
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -33,7 +33,7 @@ require_once($CFG->dirroot . '/local//normalize_grades/classes/gradelib.php');
 function local_normalize_grades_reportmismatch() {
     global $CFG, $USER, $PAGE;
     // Get the courseid for the course.
-    if($PAGE->course->id == SITEID || !isset($PAGE->course->id)) {
+    if ($PAGE->course->id == SITEID || !isset($PAGE->course->id)) {
         return;
     }
 
@@ -48,16 +48,24 @@ function local_normalize_grades_reportmismatch() {
     if ($courseid <> SITEID && $isteacher) {
 
         // Get the value for the Overview Report.
-        $overviewrpt = grade_get_setting($courseid, 'report_overview_showtotalsifcontainhidden', $CFG->grade_report_overview_showtotalsifcontainhidden);
+        $overviewrpt = grade_get_setting(
+                           $courseid,
+                           'report_overview_showtotalsifcontainhidden',
+                           $CFG->grade_report_overview_showtotalsifcontainhidden);
 
         // Get the value for the User Report.
-        $userrpt = grade_get_setting($courseid, 'report_user_showtotalsifcontainhidden', $CFG->grade_report_user_showtotalsifcontainhidden);
+        $userrpt = grade_get_setting(
+                       $courseid,
+                       'report_user_showtotalsifcontainhidden',
+                       $CFG->grade_report_user_showtotalsifcontainhidden);
 
         // Get the value for the Forecast Report, if it exists.
         if ($CFG->grade_report_forecast_showtotalsifcontainhidden) {
-            $forecastrpt = grade_get_setting($courseid, 'report_forecast_showtotalsifcontainhidden', $CFG->grade_report_forecast_showtotalsifcontainhidden);
+            $forecastrpt = grade_get_setting(
+                               $courseid,
+                               'report_forecast_showtotalsifcontainhidden',
+                               $CFG->grade_report_forecast_showtotalsifcontainhidden);
         } else {
-
             // Otherwise, use the value of the User report.
             $forecastrpt = $userrpt;
         }
@@ -74,7 +82,7 @@ function local_normalize_grades_reportmismatch() {
                 // Set the error string appropriately.
                 $errorreport = get_string('orur_reportmismatch', 'local_normalize_grades');
 
-            // If the forecast report and user report do not match.
+                // If the forecast report and user report do not match.
             } else {
 
                 // Set the error string appropriately.

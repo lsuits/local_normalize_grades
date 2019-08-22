@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * @package    block_quickmail
+ * @package    local_normalize_grades
  * @copyright  2019 onwards Louisiana State University, LSUOnline
  * @copyright  2019 onwards Robert Russo
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -27,7 +27,7 @@ require_once($CFG->dirroot . '/local/normalize_grades/lib.php');
 
 if ($hassiteconfig) {
     $settings = new admin_settingpage('local_normalize_grades', get_string('pluginname', 'local_normalize_grades'));
-    
+
     $settings->add(
             new admin_setting_heading('normalize_grade_config', get_string('ngc', 'local_normalize_grades'), null));
 
@@ -37,9 +37,17 @@ if ($hassiteconfig) {
     $settings->add(new admin_setting_configselect('normalize_grades_reportkey', get_string('reportkey', 'local_normalize_grades'),
                        get_string('reportkeyhelp', 'local_normalize_grades'), 'user', $options));
 
-    $settings->add(new admin_setting_configtext('normalize_grades_prefix', 'Course Prefix to limit by', 'Enter a course prefix here', ''));
+    $settings->add(new admin_setting_configtext(
+                           'normalize_grades_prefix',
+                           get_string('prefix', 'local_normalize_grades'),
+                           get_string('prefixhelp', 'local_normalize_grades'),
+                           ''));
 
-    $settings->add(new admin_setting_configcheckbox('normalize_grades_verbose', 'Verbose output logging?', 'Enable verbose output logging.', '0'));
+    $settings->add(new admin_setting_configcheckbox(
+                           'normalize_grades_verbose',
+                           get_string('verbose', 'local_normalize_grades'),
+                           get_string('verbosehelp', 'local_normalize_grades'),
+                           '0'));
 
     $ADMIN->add('localplugins', $settings);
 }

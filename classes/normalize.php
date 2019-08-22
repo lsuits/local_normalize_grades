@@ -23,7 +23,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-// Building the class for the task to be run during scheduled tasks
+// Building the class for the task to be run during scheduled tasks.
 class normalize {
 
     /**
@@ -41,7 +41,7 @@ class normalize {
         $whereclause = '';
 
         // Sanity check to see if the courselimiter is set.
-        if(!empty($courselimit)) {
+        if (!empty($courselimit)) {
 
             // Set the additional where clause.
             $whereclause = " AND c.shortname LIKE '" . $courselimit . "%'";
@@ -95,18 +95,18 @@ class normalize {
                     . $whereclause .
                 " GROUP BY limiter";
 
-    $data = new stdCLass;
-    // Set up the DB manager to check if the LSU tables exist.
-    $dbman = $DB->get_manager();
-    // Get the data as defined in the SQL.
-    if ($dbman->table_exists('enrol_ues_courses')) {
-        $data = $DB->get_records_sql($lsusql);
-    } else {
-        $data = $DB->get_records_sql($sql);
-    }
+        $data = new stdCLass;
+        // Set up the DB manager to check if the LSU tables exist.
+        $dbman = $DB->get_manager();
+        // Get the data as defined in the SQL.
+        if ($dbman->table_exists('enrol_ues_courses')) {
+            $data = $DB->get_records_sql($lsusql);
+        } else {
+            $data = $DB->get_records_sql($sql);
+        }
 
-    // Return this ginourmous bit of data to loop through.
-    return $data;
+        // Return this ginourmous bit of data to loop through.
+        return $data;
     }
 
     /**
@@ -119,7 +119,7 @@ class normalize {
         global $DB;
 
         $data = new stdCLass;
-        $data = $DB->get_record('normalize_grades', array('limiter' => $limiter), '*', $strictness=IGNORE_MISSING);
+        $data = $DB->get_record('normalize_grades', array('limiter' => $limiter), '*', $strictness = IGNORE_MISSING);
         return $data;
     }
 
@@ -132,10 +132,10 @@ class normalize {
     public static function get_all_precalculated_grade_data() {
         global $DB;
 
-    // Set up the data from the normalize grades table.
-    $data = new stdCLass;
-    $data = $DB->get_records('normalize_grades');
-    return $data;
+        // Set up the data from the normalize grades table.
+        $data = new stdCLass;
+        $data = $DB->get_records('normalize_grades');
+        return $data;
     }
 
     /**
@@ -147,7 +147,12 @@ class normalize {
      * @param string $originalgrade
      * @return bool
      */
-    public static function check_grade_new_updated($limiter, $originalgrade, $coursegradesetting, $coursestoredsetting) {
+    public static function check_grade_new_updated(
+                                                   $limiter,
+                                                   $originalgrade,
+                                                   $coursegradesetting,
+                                                   $coursestoredsetting,
+                                                   $timemodified) {
         global $DB;
         // Get the stored calculated data for the given limiter if there is an originalgrade.
         $calculated = self::get_calculated_grade_data($limiter);
@@ -155,12 +160,14 @@ class normalize {
         // Upcoming sanity check.
         if (!empty($calculated)) {
             // This is a sanity check to ensure we did not return an outdated or modified grade/item.
-            if ($originalgrade != $calculated->originalgrade || $coursegradesetting <> $coursestoredsetting) {
+            if ($originalgrade != $calculated->originalgrade ||
+                $coursegradesetting <> $coursestoredsetting ||
+                $calculated->timemodified <> $timemodified) {
                 // It looks like the record has been updated since the last time we checked.
                 return true;
             } else {
-               // We found the record and nothing changed.
-               return false;
+                // We found the record and nothing changed.
+                return false;
             }
         } else {
             return true;
@@ -175,6 +182,6 @@ class normalize {
      */
     public function add_grade_new($data) {
         // Add the grade item to the normalize_grades table and return the id for use.
-        return $DB->insert_record('normalize_grades', $data, $returnid=true, $bulk=false);
+        return $DB->insert_record('normalize_grades', $data, $returnid = true, $bulk = false);
     }
 }

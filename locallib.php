@@ -19,8 +19,9 @@
  * Class for building the scheduled task to store normalized STUDENT grades.
  *
  * @package    local_normalize_grades
- * @copyright  2019 Robert Russo
- * @copyright  2019 LSUOnline
+ * @copyright  2019 onwards Louisiana State University, LSUOnline
+ * @copyright  2019 onwards Robert Russo
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') or die();
@@ -28,7 +29,7 @@ defined('MOODLE_INTERNAL') or die();
 require_once($CFG->dirroot . '/local/normalize_grades/classes/normalize.php');
 require_once($CFG->dirroot . '/local/normalize_grades/classes/gradelib.php');
 
-// Building the class for the task to be run during scheduled tasks
+// Building the class for the task to be run during scheduled tasks.
 abstract class local_normalize {
 
     /**
@@ -62,11 +63,16 @@ abstract class local_normalize {
 
             // Get the course grade settings for the designated report.
             $coursegradesetting = grade_report_normalize_grades::get_course_setting($course->id);
-            $coursestoredsetting = $DB->get_record('normalize_grades', array('limiter' => $datum->limiter), 'storedsetting');
+            $coursestoredsetting = $DB->get_record('normalize_grades', array('limiter' => $datum->limiter), '*');
             $storedsetting = !empty($coursestoredsetting) ? $coursestoredsetting->storedsetting : $coursegradesetting;
 
             // Check to see if the grade changed at all.
-            $process = normalize::check_grade_new_updated($datum->limiter, $datum->originalgrade, $coursegradesetting, $storedsetting);
+            $process = normalize::check_grade_new_updated(
+                           $datum->limiter,
+                           $datum->originalgrade,
+                           $coursegradesetting,
+                           $storedsetting,
+                           $datum->timemodified);
 
             // If the grade has changed, process it.
             if ($process == true) {

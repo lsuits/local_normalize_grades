@@ -18,9 +18,12 @@
  * Setting up the scheduled task.
  *
  * @package    local_normalize_grades
- * @copyright  2019 Robert Russo
- * @copyright  2019 LSUOnline
- */ 
+ * @copyright  2019 onwards Robert Russo
+ * @copyright  2019 onwards Louisiana State University, LSUOnline
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+defined('MOODLE_INTERNAL') || die();
 
 // Define the task defaults.
 $tasks = array(
